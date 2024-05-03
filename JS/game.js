@@ -189,3 +189,164 @@ function draw() {
     noFill();
     rect(0, 0, width, height);
 }
+
+// Function called when a key is pressed
+function keyPressed() {
+    // R key
+    if(keyCode === 82) {
+        resetGame();
+    }
+
+    if(!pauseGame) {
+        if(keyCode === LEFT_ARROW) {
+            fallingPiece.input(LEFT_ARROW);
+        } else if(keyCode === RIGHT_ARROW) {
+            fallingPiece.input(RIGHT_ARROW);
+        }
+
+        if(keyCode === UP_ARROW) {
+            fallingPiece.input(UP_ARROW);
+        }
+    }
+}
+
+// Class for the falling piece
+class PlayPiece {
+    constructor() {
+        this.pos = createVector(0, 0);
+        this.rotation = 0;
+        this.nextPieceType = Math.floor(Math.random() * 7);
+        this.nextPieces = [];
+        this.pieceType = 0;
+        this.pieces = 0;
+        this.orientation = [];
+        this.fallen = false;
+    }
+
+    // Generate the next piece
+    nextPiece() {
+        this.nextPieceType = pseudoRandom(this.pieceType);
+        this.nextPiece = [];
+
+        const points = orientPoints(this.nextPieceType, 0);
+        let xx = 525, yy = 490;
+
+        if(this.nextPieceType !== 0 && this.nextPieceType !== 3 && this.nextPieceType !== 5) {
+            xx += (gridSpace * 0.5);
+        }
+
+        if(this.nextPieceType == 5) {
+            xx -= (gridSpace * 0.5);
+        }
+
+        for(let i = 0; i < 4; i++) {
+            this.nextPieces.push(new Square(xx + points[i][0] * gridSpace, yy + points[i][1] * gridSpace, this.nextPieceType))
+        }
+    }
+
+    // Make the piece fall
+    fall(amount) {
+        if(this.futureCollision(0, amount, this.rotation)) {
+            this.addPos(0, amount);
+            this.fallen = true;
+        } else {
+            if(!this.fallen) {
+                pauseGame = true;
+                gameOver = true;
+            } else {
+                this.commitShape();
+            }
+        }
+    }
+
+    // Reset the current piece
+    resetPiece() {
+        this.rotation = 0;
+        this.fallen = false;
+        this.pos.x = 330;
+        this.pos.y = -60;
+
+        this.pieceType = this.nextPieceType;
+        this.nextPiece();
+        this.newPoints();
+    }
+
+    // Generate the points for the current piece
+    newPoints() {
+        const points = orientPoints(this.pieceType, this.rotation);
+        this.orientation = points;
+        this.pieces = [];
+
+        for(let i = 0; i < points.length; i++) {
+            this.pieces.push(new Square(this.pos.x + points[i][0] * gridSpace,
+                                        this.pos.y + points[i][1] * gridSpace,
+                                        this.pieceType));
+        }
+    }
+
+    // Update the position of the current piece
+    updatePoints() {
+        if(this.pieces) {
+            const points = orientPoints(this.pieceType, this.rotation);
+            this.orientation = points;
+
+            for(let i = 0; i < 4; i++) {
+                this.pieces[i].pos.x = this.pos.x + points[i][0] * gridSpace;
+                this.pieces[i].pos.y = this.pos.y + points[i][1] * gridSpace;
+            }
+        }
+    }
+
+    addPos(x, y) {
+        this.pos.x += x;
+        this.pos.y += y;
+
+        if(this.pieces) {
+            for(let i = 0; i < 4; i++) {
+                this.pieces[i].pos.x += x;
+                this.pieces[i].pos.y += y;
+            }
+        }
+    }
+
+    // Check if there will be a collision in the
+    // future
+    futureCollision(x, y, rotation) {
+        let xx, yy, points = 0;
+
+        if(rotation !== this.rotation) {
+            points = orientPoints(this.pieceType, rotation);
+        }
+
+        for(let i = 0; i < this.pieces.length; i++) {
+            if(points) {
+                xx = this.pos.x + points[i][0] * gridSpace;
+                xx = this.pos.y + points[i][1] * gridSpace;
+            } else {
+                xx = this.points[i].pos.x + x;
+                xx = this.points[i].pos.y + y;
+            }
+
+            if(xx < gameEdgeLeft || xx + gridSpace > gameEdgeRight
+                || yy + gridSpace > height) {
+                    return true;
+            }
+
+            for(let j = 0; j < gridPieces.length; j++) {
+                if(xx === gridPieces[j].pos.x) {
+                    if(yy >= gridPieces[j].pos.y &&
+                        yy < gridPieces[j].pos.y + gridSpace) {
+                            return true;
+                    }
+
+                    if(yy + gridSpace > gridPieces[j].pos.y
+                        && yy + gridSpace <= gridPieces[j].pos.y + gridSpace) {
+                            return true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Handle user inputs
+}
